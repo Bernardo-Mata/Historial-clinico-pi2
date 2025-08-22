@@ -7,9 +7,18 @@ from app.database import SessionLocal
 from app.models import Usuario
 from app.utils import verify_password, create_access_token, SECRET_KEY, ALGORITHM
 from app.routes import router
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI()
 app.include_router(router)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # O especifica ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -56,4 +65,4 @@ def protected_route(current_user: Usuario = Depends(get_current_user)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", port=8000, reload=True)

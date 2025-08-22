@@ -1,4 +1,7 @@
 .gitignore
 *.env
-venv
+*venv
 *__init__.py
+*/node_modules
+package-lock.json
+package.json

@@ -3,10 +3,13 @@
 # Operaciones CRUD seguras para todos los modelos
 from sqlalchemy.orm import Session
 from . import models, schemas
+from .utils import get_password_hash
 
 # Usuario
 def create_usuario(db: Session, usuario: schemas.UsuarioCreate):
-    db_usuario = models.Usuario(**usuario.dict())
+    usuario_dict = usuario.dict()
+    usuario_dict['contrasena'] = get_password_hash(usuario_dict['contrasena'])
+    db_usuario = models.Usuario(**usuario_dict)
     db.add(db_usuario)
     db.commit()
     db.refresh(db_usuario)

@@ -1,12 +1,14 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Usa variables de entorno para mayor seguridad
-MYSQL_USER = os.getenv("MYSQL_USER", "root")
-MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "tu_contraseña_segura")
-MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
-MYSQL_DB = os.getenv("MYSQL_DB", "historial_clinico")
+MYSQL_USER = os.getenv("MYSQL_USER")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
+MYSQL_HOST = os.getenv("MYSQL_HOST")
+MYSQL_DB = os.getenv("MYSQL_DB")
 
 SQLALCHEMY_DATABASE_URL = (
     f"mysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DB}"
