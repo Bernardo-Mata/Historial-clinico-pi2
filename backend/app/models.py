@@ -16,7 +16,7 @@ class Usuario(Base):
     apellidos = Column(String, nullable=False)
     correo_electronico = Column(String, unique=True, index=True, nullable=False)
     profesion = Column(String)
-    contrasena = Column(String, nullable=False)
+    contrasena = Column(String, nullable=False)  # Guardar el hash, no la contraseña en texto plano
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     usuario_id = Column(Integer, unique=True)
 
