@@ -1,18 +1,45 @@
 # crud.py
 
 # Operaciones CRUD seguras para todos los modelos
+from fastapi import  HTTPException
 from sqlalchemy.orm import Session
 from . import models, schemas
 from .utils import get_password_hash
-
+# Usuario
 # Usuario
 def create_usuario(db: Session, usuario: schemas.UsuarioCreate):
-    usuario_dict = usuario.dict()
-    usuario_dict['contrasena'] = get_password_hash(usuario_dict['contrasena'])
-    db_usuario = models.Usuario(**usuario_dict)
+    """
+    Crea un usuario con la contraseña hasheada.
+    Si la profesión no es 'paciente' (case-insensitive) también crea un registro en `doctor`.
+    """
+    existing = db.query(models.Usuario).filter(models.Usuario.correo_electronico == usuario.correo_electronico).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="El correo ya está registrado")
+
+    usr_data = usuario.dict()
+    usr_data['contrasena'] = get_password_hash(usr_data['contrasena'])
+    db_usuario = models.Usuario(**usr_data)
     db.add(db_usuario)
     db.commit()
     db.refresh(db_usuario)
+
+    # Registrar como doctor si la profesion no es 'paciente'
+    profesion = (db_usuario.profesion or "").strip().lower()
+    if profesion and profesion != "paciente":
+        existing_doc = db.query(models.Doctor).filter(models.Doctor.correo_electronico == db_usuario.correo_electronico).first()
+        if not existing_doc:
+            doctor = models.Doctor(
+                nombre=db_usuario.nombre,
+                apellidos=db_usuario.apellidos,
+                consultorio=None,
+                profesion=db_usuario.profesion,
+                telefono_celular=None,
+                correo_electronico=db_usuario.correo_electronico
+            )
+            db.add(doctor)
+            db.commit()
+            db.refresh(doctor)
+
     return db_usuario
 
 def get_usuarios(db: Session):

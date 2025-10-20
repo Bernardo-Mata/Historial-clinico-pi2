@@ -27,9 +27,16 @@ Este proyecto implementa una arquitectura moderna y segura basada en FastAPI (Py
 ### Backend
 1. Instala dependencias:
    ```sh
-   pip install fastapi uvicorn pydantic
+   pip install -r requirements.txt
    ```
-2. Ejecuta el servidor:
+2. Configura el archivo `.env`:
+   ```
+   MYSQL_USER=tu_usuario
+   MYSQL_PASSWORD=tu_contraseña
+   MYSQL_HOST=localhost
+   MYSQL_DB=historial_clinico
+   ```
+3. Ejecuta el servidor:
    ```sh
    uvicorn main:app --reload
    ```
@@ -45,15 +52,22 @@ Este proyecto implementa una arquitectura moderna y segura basada en FastAPI (Py
    ```
 
 ## Seguridad
-- Todas las entradas se validan y sanitizan.
-- Los endpoints manejan errores y rechazan datos maliciosos.
-- El frontend nunca confía en datos externos.
+- Contraseñas hasheadas con bcrypt.
+- Autenticación con JWT.
+- Validación de datos con Pydantic.
+- CORS habilitado para desarrollo.
 
-## Dependencias
-- **Backend:** FastAPI, Uvicorn, Pydantic
-- **Frontend:** React, Axios
+## Endpoints principales
+- `POST /usuarios` — Registro de usuario.
+- `POST /login` — Login y obtención de JWT.
+- `GET /protected` — Ejemplo de ruta protegida.
+
+## Dependencias principales
+- **Backend:** fastapi, uvicorn, sqlalchemy, pydantic, mysqlclient, python-dotenv, python-jose, passlib
+- **Frontend:** react, axios
 
 ## Notas
-- Usa rutas relativas desde la raíz del proyecto.
-- El código está listo para producción y sigue las mejores prácticas.
-- Para ampliar la funcionalidad, crea nuevos componentes en `/frontend/src/components` y nuevos endpoints en `/backend/app/routes.py`.
+- Agrega nuevos componentes en `/frontend/src/components`.
+- Agrega nuevos endpoints en `/backend/app/routes.py`.
+- El frontend consume la API en `http://localhost:8000`.
+
