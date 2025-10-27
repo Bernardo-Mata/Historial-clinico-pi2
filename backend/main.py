@@ -1,11 +1,10 @@
-
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
+import jwt
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import Usuario
-from app.utils import verify_password, create_access_token, SECRET_KEY, ALGORITHM
+from app.utils import verify_password, create_access_token, decode_access_token, SECRET_KEY, ALGORITHM
 from app.routes import router
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -29,22 +28,22 @@ def get_db():
     finally:
         db.close()
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=401,
         detail="No autorizado",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
+    
+    payload = decode_access_token(token)
+    if payload is None:
         raise credentials_exception
-    db = SessionLocal()
+    
+    email: str = payload.get("sub")
+    if email is None:
+        raise credentials_exception
+    
     user = db.query(Usuario).filter(Usuario.correo_electronico == email).first()
-    db.close()
     if user is None:
         raise credentials_exception
     return user
@@ -56,6 +55,17 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(status_code=400, detail="Credenciales incorrectas")
     access_token = create_access_token(data={"sub": user.correo_electronico})
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.post("/logout")
+def logout(current_user: Usuario = Depends(get_current_user)):
+    """
+    Endpoint de logout. En una implementación con JWT, el logout se maneja 
+    principalmente en el cliente eliminando el token. Este endpoint confirma 
+    que el usuario está autenticado antes de hacer logout.
+    """
+    return {"message": f"Sesión cerrada exitosamente para {current_user.nombre}"}
+
 
 @app.get("/protected")
 def protected_route(current_user: Usuario = Depends(get_current_user)):
