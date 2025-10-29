@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Register from './components/Register';
-import Dashboard from './components/Dashboard';
+import MainLayout from './components/MainLayout';
 
 function App() {
   const [currentView, setCurrentView] = useState('login'); // 'login', 'register', 'dashboard'
@@ -51,7 +51,7 @@ function App() {
       )}
       
       {currentView === 'dashboard' && (
-        <Dashboard onLogout={handleLogout} />
+        <MainLayout onLogout={handleLogout} />
       )}
     </>
   );
