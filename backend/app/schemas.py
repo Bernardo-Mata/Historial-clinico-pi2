@@ -88,21 +88,30 @@ class HistorialClinico(HistorialClinicoBase):
 
 # Cita
 class CitaBase(BaseModel):
-    fecha_cita: Optional[datetime] = None
-    doctor_id: int
-    paciente_id: int
-    consultorio_id: int
-    telefono: Optional[str] = None
+    fecha_cita: datetime
     detalle_cita: Optional[str] = None
+    telefono: Optional[str] = None
     correo_electronico: Optional[str] = None
 
 class CitaCreate(CitaBase):
-    pass
+    paciente_id: int
+    doctor_id: Optional[int] = None
+    consultorio_id: Optional[int] = None  # Hacer opcional
+
+class CitaUpdate(CitaBase):
+    paciente_id: Optional[int] = None
+    doctor_id: Optional[int] = None
+    consultorio_id: Optional[int] = None
 
 class Cita(CitaBase):
     id: int
+    paciente_id: int
+    doctor_id: Optional[int] = None
+    consultorio_id: Optional[int] = None
+
     class Config:
         orm_mode = True
+        from_attributes = True
 
 # Consultorio
 class ConsultorioBase(BaseModel):
