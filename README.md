@@ -60,9 +60,10 @@ Este proyecto implementa una arquitectura moderna y segura basada en FastAPI (Py
 
    ```
 
-```2. Configura el archivo `.env`:
+2. Configura el archivo `.env`:
 
-Proyecto/   ```
+Proyecto/
+```
 
 ├── backend/   MYSQL_USER=tu_usuario
 
@@ -134,13 +135,15 @@ Proyecto/   ```
 
 
 
-### Backend## Notas
+### Backend
+## Notas
 
 - Agrega nuevos componentes en `/frontend/src/components`.
 
 1. **Crear y activar entorno virtual:**- Agrega nuevos endpoints en `/backend/app/routes.py`.
 
-   ```bash- El frontend consume la API en `http://localhost:8000`.
+   ```
+   bash- El frontend consume la API en `http://localhost:8000`.
 
    cd backend
 
@@ -153,12 +156,12 @@ Proyecto/   ```
    source venv/bin/activate
    ```
 
-2. **Instalar dependencias:**
+3. **Instalar dependencias:**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Configurar base de datos:**
+4. **Configurar base de datos:**
    - Crear una base de datos MySQL llamada `historial_clinico`
    - Crear archivo `.env` en la raíz del proyecto:
      ```env
@@ -169,13 +172,13 @@ Proyecto/   ```
      SECRET_KEY=tu_clave_secreta_super_segura
      ```
 
-4. **Crear tablas en la base de datos:**
+5. **Crear tablas en la base de datos:**
    ```bash
    cd backend
    python -c "from app.database import Base, engine; import app.models; Base.metadata.create_all(bind=engine); print('Tablas creadas OK')"
    ```
 
-5. **Iniciar el servidor:**
+6. **Iniciar el servidor:**
    ```bash
    uvicorn main:app --reload
    ```
