@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const API_URL = "http://localhost:8000";
 
-export default function Login({ onLoginSuccess, onGoToRegister }) {
+export default function Login({ setIsAuthenticated }) {
+  const navigate = useNavigate();
   const [loginData, setLoginData] = useState({
     username: "",
     password: ""
@@ -22,6 +24,7 @@ export default function Login({ onLoginSuccess, onGoToRegister }) {
     setLoading(true);
     
     try {
+      // Usar FormData como lo tenías antes
       const formData = new FormData();
       formData.append('username', loginData.username);
       formData.append('password', loginData.password);
@@ -34,19 +37,34 @@ export default function Login({ onLoginSuccess, onGoToRegister }) {
       if (response.ok) {
         const data = await response.json();
         setMessage("Login exitoso!");
-        localStorage.setItem('token', data.access_token);
         
+        // Guardar token y datos del usuario
+        localStorage.setItem('token', data.access_token);
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
+        
+        // Actualizar estado de autenticación
+        setIsAuthenticated(true);
+        
+        // Redirigir al dashboard
         setTimeout(() => {
-          onLoginSuccess();
-        }, 1000);
+          navigate('/');
+        }, 500);
       } else {
-        setError("Credenciales incorrectas");
+        const errorData = await response.json();
+        setError(errorData.detail || "Credenciales incorrectas");
       }
     } catch (err) {
       setError("Error al conectar con el servidor");
+      console.error('Error:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const goToRegister = () => {
+    navigate('/register');
   };
 
   return (
@@ -122,7 +140,7 @@ export default function Login({ onLoginSuccess, onGoToRegister }) {
             
             <button 
               type="button"
-              onClick={onGoToRegister}
+              onClick={goToRegister}
               className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm 
                          font-semibold text-gray-800 bg-gray-50 hover:bg-gray-100 
                          focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400

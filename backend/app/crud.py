@@ -1,12 +1,12 @@
 # crud.py
 
 # Operaciones CRUD seguras para todos los modelos
-from fastapi import  HTTPException
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from . import models, schemas
 from .utils import get_password_hash
-# Usuario
-# Usuario
+
+# ==================== USUARIO ====================
 def create_usuario(db: Session, usuario: schemas.UsuarioCreate):
     """
     Crea un usuario con la contraseña hasheada.
@@ -42,10 +42,13 @@ def create_usuario(db: Session, usuario: schemas.UsuarioCreate):
 
     return db_usuario
 
+def get_usuario_by_email(db: Session, email: str):
+    return db.query(models.Usuario).filter(models.Usuario.correo_electronico == email).first()
+
 def get_usuarios(db: Session):
     return db.query(models.Usuario).all()
 
-# Doctor
+# ==================== DOCTOR ====================
 def create_doctor(db: Session, doctor: schemas.DoctorCreate):
     db_doctor = models.Doctor(**doctor.dict())
     db.add(db_doctor)
@@ -56,7 +59,10 @@ def create_doctor(db: Session, doctor: schemas.DoctorCreate):
 def get_doctores(db: Session):
     return db.query(models.Doctor).all()
 
-# Paciente
+def get_doctor(db: Session, doctor_id: int):
+    return db.query(models.Doctor).filter(models.Doctor.id == doctor_id).first()
+
+# ==================== PACIENTE ====================
 def create_paciente(db: Session, paciente: schemas.PacienteCreate):
     db_paciente = models.Paciente(**paciente.dict())
     db.add(db_paciente)
@@ -67,7 +73,28 @@ def create_paciente(db: Session, paciente: schemas.PacienteCreate):
 def get_pacientes(db: Session):
     return db.query(models.Paciente).all()
 
-# Historial Clínico
+def get_paciente(db: Session, paciente_id: int):
+    return db.query(models.Paciente).filter(models.Paciente.id == paciente_id).first()
+
+def update_paciente(db: Session, paciente_id: int, paciente_update: schemas.PacienteCreate):
+    paciente = get_paciente(db, paciente_id)
+    if paciente:
+        for key, value in paciente_update.dict().items():
+            setattr(paciente, key, value)
+        db.commit()
+        db.refresh(paciente)
+    return paciente
+
+def delete_paciente(db: Session, paciente_id: int):
+    paciente = get_paciente(db, paciente_id)
+    if paciente:
+        # Eliminar historiales relacionados primero
+        db.query(models.HistorialClinico).filter(models.HistorialClinico.paciente_id == paciente_id).delete()
+        db.delete(paciente)
+        db.commit()
+    return paciente
+
+# ==================== HISTORIAL CLÍNICO ====================
 def create_historial(db: Session, historial: schemas.HistorialClinicoCreate):
     db_historial = models.HistorialClinico(**historial.dict())
     db.add(db_historial)
@@ -81,10 +108,16 @@ def get_historiales(db: Session):
 def get_historial(db: Session, historial_id: int):
     return db.query(models.HistorialClinico).filter(models.HistorialClinico.id == historial_id).first()
 
+def get_historiales_by_paciente(db: Session, paciente_id: int):
+    """Obtiene todos los historiales clínicos de un paciente específico"""
+    return db.query(models.HistorialClinico).filter(
+        models.HistorialClinico.paciente_id == paciente_id
+    ).all()
+
 def update_historial(db: Session, historial_id: int, historial_update: schemas.HistorialClinicoCreate):
     historial = get_historial(db, historial_id)
     if historial:
-        for key, value in historial_update.dict().items():
+        for key, value in historial_update.dict(exclude_unset=True).items():
             setattr(historial, key, value)
         db.commit()
         db.refresh(historial)
@@ -97,7 +130,7 @@ def delete_historial(db: Session, historial_id: int):
         db.commit()
     return historial
 
-# Cita
+# ==================== CITA ====================
 def create_cita(db: Session, cita: schemas.CitaCreate):
     db_cita = models.Cita(**cita.dict())
     db.add(db_cita)
@@ -108,7 +141,10 @@ def create_cita(db: Session, cita: schemas.CitaCreate):
 def get_citas(db: Session):
     return db.query(models.Cita).all()
 
-# Consultorio
+def get_cita(db: Session, cita_id: int):
+    return db.query(models.Cita).filter(models.Cita.id == cita_id).first()
+
+# ==================== CONSULTORIO ====================
 def create_consultorio(db: Session, consultorio: schemas.ConsultorioCreate):
     db_consultorio = models.Consultorio(**consultorio.dict())
     db.add(db_consultorio)
@@ -119,7 +155,7 @@ def create_consultorio(db: Session, consultorio: schemas.ConsultorioCreate):
 def get_consultorios(db: Session):
     return db.query(models.Consultorio).all()
 
-# DoctorConsultorio
+# ==================== DOCTOR CONSULTORIO ====================
 def create_doctor_consultorio(db: Session, dc: schemas.DoctorConsultorioCreate):
     db_dc = models.DoctorConsultorio(**dc.dict())
     db.add(db_dc)

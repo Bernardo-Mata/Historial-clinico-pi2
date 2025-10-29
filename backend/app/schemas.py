@@ -65,20 +65,26 @@ class Paciente(PacienteBase):
 
 # Historial Clínico
 class HistorialClinicoBase(BaseModel):
-    paciente_id: int
-    doctor_id: int
     medicamento: Optional[str] = None
     tratamiento: Optional[str] = None
     diagnostico: Optional[str] = None
     notas: Optional[str] = None
 
 class HistorialClinicoCreate(HistorialClinicoBase):
+    paciente_id: int
+    doctor_id: Optional[int] = None  # Esto ya está bien
+
+class HistorialClinicoUpdate(HistorialClinicoBase):
     pass
 
 class HistorialClinico(HistorialClinicoBase):
     id: int
+    paciente_id: int
+    doctor_id: Optional[int] = None
+
     class Config:
         orm_mode = True
+        from_attributes = True
 
 # Cita
 class CitaBase(BaseModel):

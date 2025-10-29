@@ -2,24 +2,13 @@
 # Endpoints de la API
 
 # Endpoints de la API para historial clínico
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from . import crud, schemas, models
-from .database import SessionLocal, engine
-
-models.Base.metadata.create_all(bind=engine)
+from .database import get_db
+from .utils import verify_password, create_access_token
 
 router = APIRouter()
-
-# Dependencia para obtener la sesión de base de datos
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 
 # Endpoints Usuario
 @router.post("/usuarios", response_model=schemas.Usuario)
@@ -30,16 +19,7 @@ def create_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)
 def read_usuarios(db: Session = Depends(get_db)):
     return crud.get_usuarios(db)
 
-# Endpoint de Registro (alias para crear usuario)
-@router.post("/register")
-def register_user(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)):
-    try:
-        new_user = crud.create_usuario(db, usuario)
-        return {"message": "Usuario registrado exitosamente", "user": new_user}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-# Endpoints Doctor
+# ==================== DOCTORES ====================
 @router.post("/doctores", response_model=schemas.Doctor)
 def create_doctor(doctor: schemas.DoctorCreate, db: Session = Depends(get_db)):
     return crud.create_doctor(db, doctor)
@@ -48,7 +28,7 @@ def create_doctor(doctor: schemas.DoctorCreate, db: Session = Depends(get_db)):
 def read_doctores(db: Session = Depends(get_db)):
     return crud.get_doctores(db)
 
-# Endpoints Paciente
+# ==================== PACIENTES ====================
 @router.post("/pacientes", response_model=schemas.Paciente)
 def create_paciente(paciente: schemas.PacienteCreate, db: Session = Depends(get_db)):
     return crud.create_paciente(db, paciente)
@@ -57,7 +37,28 @@ def create_paciente(paciente: schemas.PacienteCreate, db: Session = Depends(get_
 def read_pacientes(db: Session = Depends(get_db)):
     return crud.get_pacientes(db)
 
-# Endpoints Historial Clínico
+@router.get("/pacientes/{paciente_id}", response_model=schemas.Paciente)
+def read_paciente(paciente_id: int, db: Session = Depends(get_db)):
+    paciente = crud.get_paciente(db, paciente_id)
+    if not paciente:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    return paciente
+
+@router.put("/pacientes/{paciente_id}", response_model=schemas.Paciente)
+def update_paciente(paciente_id: int, paciente: schemas.PacienteCreate, db: Session = Depends(get_db)):
+    updated_paciente = crud.update_paciente(db, paciente_id, paciente)
+    if not updated_paciente:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    return updated_paciente
+
+@router.delete("/pacientes/{paciente_id}")
+def delete_paciente(paciente_id: int, db: Session = Depends(get_db)):
+    deleted_paciente = crud.delete_paciente(db, paciente_id)
+    if not deleted_paciente:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    return {"message": "Paciente eliminado exitosamente"}
+
+# ==================== HISTORIAL CLÍNICO ====================
 @router.post("/historiales", response_model=schemas.HistorialClinico)
 def create_historial(historial: schemas.HistorialClinicoCreate, db: Session = Depends(get_db)):
     return crud.create_historial(db, historial)
@@ -66,8 +67,16 @@ def create_historial(historial: schemas.HistorialClinicoCreate, db: Session = De
 def read_historiales(db: Session = Depends(get_db)):
     return crud.get_historiales(db)
 
+@router.get("/historiales/paciente/{paciente_id}", response_model=list[schemas.HistorialClinico])
+def read_historiales_paciente(paciente_id: int, db: Session = Depends(get_db)):
+    """Obtiene todos los historiales clínicos de un paciente específico"""
+    paciente = crud.get_paciente(db, paciente_id)
+    if not paciente:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    return crud.get_historiales_by_paciente(db, paciente_id)
+
 @router.get("/historiales/{historial_id}", response_model=schemas.HistorialClinico)
-def get_historial(historial_id: int, db: Session = Depends(get_db)):
+def read_historial(historial_id: int, db: Session = Depends(get_db)):
     historial = crud.get_historial(db, historial_id)
     if not historial:
         raise HTTPException(status_code=404, detail="Historial no encontrado")
@@ -87,7 +96,7 @@ def delete_historial(historial_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Historial no encontrado")
     return historial
 
-# Endpoints Cita
+# ==================== CITAS ====================
 @router.post("/citas", response_model=schemas.Cita)
 def create_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
     return crud.create_cita(db, cita)
@@ -96,7 +105,7 @@ def create_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
 def read_citas(db: Session = Depends(get_db)):
     return crud.get_citas(db)
 
-# Endpoints Consultorio
+# ==================== CONSULTORIOS ====================
 @router.post("/consultorios", response_model=schemas.Consultorio)
 def create_consultorio(consultorio: schemas.ConsultorioCreate, db: Session = Depends(get_db)):
     return crud.create_consultorio(db, consultorio)
@@ -105,7 +114,7 @@ def create_consultorio(consultorio: schemas.ConsultorioCreate, db: Session = Dep
 def read_consultorios(db: Session = Depends(get_db)):
     return crud.get_consultorios(db)
 
-# Endpoints DoctorConsultorio
+# ==================== DOCTOR CONSULTORIO ====================
 @router.post("/doctor_consultorios", response_model=schemas.DoctorConsultorio)
 def create_doctor_consultorio(dc: schemas.DoctorConsultorioCreate, db: Session = Depends(get_db)):
     return crud.create_doctor_consultorio(db, dc)

@@ -11,6 +11,13 @@ env_path = backend_dir / '.env'
 # Cargar el archivo .env
 load_dotenv(dotenv_path=env_path)
 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 # Usar los nombres de variables que tienes en tu .env
 MYSQL_USER = os.getenv("DB_USER")
 MYSQL_PASSWORD = os.getenv("DB_PASSWORD")

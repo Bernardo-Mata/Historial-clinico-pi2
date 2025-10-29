@@ -1,59 +1,45 @@
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Register from './components/Register';
 import MainLayout from './components/MainLayout';
+import Dashboard from './components/Dashboard';
+import HistorialClinico from './components/HistorialClinico';
+import Calendario from './components/Calendario';
 
 function App() {
-  const [currentView, setCurrentView] = useState('login'); // 'login', 'register', 'dashboard'
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Verificar si hay un token guardado
+    // Verificar si hay token al cargar la app
     const token = localStorage.getItem('token');
-    if (token) {
-      setCurrentView('dashboard');
-    }
+    setIsAuthenticated(!!token);
   }, []);
 
-  const handleLoginSuccess = () => {
-    setCurrentView('dashboard');
-  };
-
-  const handleRegisterSuccess = () => {
-    setCurrentView('dashboard');
-  };
-
-  const handleGoToRegister = () => {
-    setCurrentView('register');
-  };
-
-  const handleBackToLogin = () => {
-    setCurrentView('login');
-  };
-
-  const handleLogout = () => {
-    setCurrentView('login');
-  };
-
   return (
-    <>
-      {currentView === 'login' && (
-        <Login 
-          onLoginSuccess={handleLoginSuccess}
-          onGoToRegister={handleGoToRegister}
-        />
-      )}
+    <Routes>
+      <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
+      <Route path="/register" element={<Register />} />
       
-      {currentView === 'register' && (
-        <Register 
-          onRegisterSuccess={handleRegisterSuccess}
-          onBackToLogin={handleBackToLogin}
-        />
-      )}
-      
-      {currentView === 'dashboard' && (
-        <MainLayout onLogout={handleLogout} />
-      )}
-    </>
+      {/* Rutas protegidas */}
+      <Route
+        path="/"
+        element={
+          isAuthenticated ? (
+            <MainLayout setIsAuthenticated={setIsAuthenticated} />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      >
+        <Route index element={<Dashboard />} />
+        <Route path="historial-clinico" element={<HistorialClinico />} />
+        <Route path="calendario" element={<Calendario />} />
+      </Route>
+
+      {/* Redirigir cualquier ruta no encontrada */}
+      <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
+    </Routes>
   );
 }
 
