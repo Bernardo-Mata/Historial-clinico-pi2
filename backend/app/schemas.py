@@ -25,6 +25,12 @@ class Usuario(UsuarioBase):
     class Config:
         orm_mode = True
 
+class RegisterData(BaseModel):
+    nombre: str
+    apellidos: Optional[str] = None
+    correo_electronico: EmailStr
+    contrasena: str
+
 # Doctor
 class DoctorBase(BaseModel):
     nombre: str

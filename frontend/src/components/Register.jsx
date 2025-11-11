@@ -7,8 +7,7 @@ export default function Register() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     nombre: "",
-    apellido_paterno: "",
-    apellido_materno: "",
+    apellidos: "",
     correo_electronico: "",
     contrasena: ""
   });
@@ -86,7 +85,7 @@ export default function Register() {
               id="nombre" 
               name="nombre" 
               type="text"
-              placeholder="Juan"
+              placeholder="Juan Carlos"
               value={formData.nombre}
               onChange={handleChange}
               required
@@ -96,37 +95,21 @@ export default function Register() {
           </div>
 
           <div>
-            <label htmlFor="apellido_paterno" className="block text-sm font-medium text-gray-700">
-              Apellido Paterno
+            <label htmlFor="apellidos" className="block text-sm font-medium text-gray-700">
+              Apellidos
             </label>
             <input 
-              id="apellido_paterno" 
-              name="apellido_paterno" 
+              id="apellidos" 
+              name="apellidos" 
               type="text"
-              placeholder="Pérez"
-              value={formData.apellido_paterno}
+              placeholder="Pérez García"
+              value={formData.apellidos}
               onChange={handleChange}
               required
               className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400
                          focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             />
-          </div>
-
-          <div>
-            <label htmlFor="apellido_materno" className="block text-sm font-medium text-gray-700">
-              Apellido Materno
-            </label>
-            <input 
-              id="apellido_materno" 
-              name="apellido_materno" 
-              type="text"
-              placeholder="García"
-              value={formData.apellido_materno}
-              onChange={handleChange}
-              required
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400
-                         focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            />
+            <p className="mt-1 text-xs text-gray-500">Ingresa ambos apellidos</p>
           </div>
 
           <div>

@@ -5,12 +5,15 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import Usuario
 from app.utils import verify_password, create_access_token, decode_access_token, SECRET_KEY, ALGORITHM
-from app.routes import router
+from app.routes import router as api_router
+from app.routes_ia import router as ia_router
 from fastapi.middleware.cors import CORSMiddleware
+from app.schemas import RegisterData
+from passlib.context import CryptContext
 
-
-app = FastAPI()
-app.include_router(router)
+app = FastAPI(title="Proyecto API")
+app.include_router(api_router)
+app.include_router(ia_router, prefix="/ia", tags=["ia"])
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # O especifica ["http://localhost:3000"]
@@ -55,6 +58,31 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(status_code=400, detail="Credenciales incorrectas")
     access_token = create_access_token(data={"sub": user.correo_electronico})
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+@app.post("/register")
+def register(data: RegisterData, db: Session = Depends(get_db)):
+    # Verificar si ya existe
+    existing = db.query(Usuario).filter(Usuario.correo_electronico == data.correo_electronico).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Usuario ya existe")
+
+    # Hashear password
+    hashed = pwd_context.hash(data.contrasena)
+
+    # Crear usuario
+    nuevo = Usuario(
+        nombre=data.nombre,
+        apellidos=data.apellidos,
+        correo_electronico=data.correo_electronico,
+        contrasena=hashed
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+
+    return {"message": "Usuario creado", "id": nuevo.id, "correo": nuevo.correo_electronico}
 
 
 @app.post("/logout")
