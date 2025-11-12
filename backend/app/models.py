@@ -3,7 +3,7 @@
 
 
 # Modelos de datos para la base de datos clínica
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, Time
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, Time, JSON
 from sqlalchemy.orm import relationship
 from .database import Base
 import datetime
@@ -61,6 +61,7 @@ class HistorialClinico(Base):
     tratamiento = Column(Text)
     diagnostico = Column(Text)
     notas = Column(Text)
+    analisis_ia = Column(JSON, nullable=True)  # Almacena análisis de IA en formato JSON
     paciente = relationship("Paciente", back_populates="historiales")
     doctor = relationship("Doctor", back_populates="historiales")
 
