@@ -7,6 +7,7 @@ from app.models import Usuario
 from app.utils import verify_password, create_access_token, decode_access_token, SECRET_KEY, ALGORITHM
 from app.routes import router as api_router
 from app.routes_ia import router as ia_router
+from app.routes_email import router as email_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.schemas import RegisterData
 from passlib.context import CryptContext
@@ -14,6 +15,7 @@ from passlib.context import CryptContext
 app = FastAPI(title="Proyecto API")
 app.include_router(api_router)
 app.include_router(ia_router, prefix="/ia", tags=["ia"])
+app.include_router(email_router, prefix="/email", tags=["email"])
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # O especifica ["http://localhost:3000"]

@@ -10,3 +10,5 @@ cryptography
 passlib[bcrypt]
 httpx
 pymysql
+aiosmtplib
+email-validator

@@ -7,8 +7,11 @@ from sqlalchemy.orm import Session
 from . import crud, schemas, models
 from .database import get_db
 from .utils import verify_password, create_access_token
+from .email_service import enviar_correo_confirmacion_cita
+import logging
 
 router = APIRouter()
+logger = logging.getLogger("uvicorn.error")
 
 # Endpoints Usuario
 @router.post("/usuarios", response_model=schemas.Usuario)
@@ -98,12 +101,56 @@ def delete_historial(historial_id: int, db: Session = Depends(get_db)):
 
 # ==================== CITAS ====================
 @router.post("/citas", response_model=schemas.Cita)
-def create_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
-    return crud.create_cita(db, cita)
+async def create_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
+    # Crear la cita
+    nueva_cita = crud.create_cita(db, cita)
+    
+    # Enviar correo de confirmación si hay email
+    if cita.correo_electronico:
+        try:
+            # Obtener información del paciente
+            paciente = crud.get_paciente(db, cita.paciente_id)
+            if paciente:
+                nombre_completo = f"{paciente.nombre} {paciente.apellidos}"
+                
+                # Extraer hora de fecha_cita si es datetime, o usar un valor por defecto
+                fecha_str = str(cita.fecha_cita)
+                hora_str = "Por confirmar"
+                
+                # Si fecha_cita incluye hora (formato: "YYYY-MM-DD HH:MM:SS")
+                if " " in fecha_str:
+                    partes = fecha_str.split(" ")
+                    fecha_str = partes[0]
+                    hora_str = partes[1][:5] if len(partes) > 1 else hora_str
+                
+                # Enviar correo de forma asíncrona
+                await enviar_correo_confirmacion_cita(
+                    destinatario=cita.correo_electronico,
+                    nombre_paciente=nombre_completo,
+                    fecha_cita=fecha_str,
+                    hora_cita=hora_str,
+                    motivo=cita.detalle_cita or "Consulta general"
+                )
+                logger.info(f"Correo de confirmación enviado a {cita.correo_electronico}")
+        except Exception as e:
+            # No fallar la creación de la cita si falla el correo
+            logger.warning(f"No se pudo enviar correo de confirmación: {e}")
+    
+    return nueva_cita
 
 @router.get("/citas", response_model=list[schemas.Cita])
 def read_citas(db: Session = Depends(get_db)):
     return crud.get_citas(db)
+
+@router.delete("/citas/{cita_id}")
+def delete_cita(cita_id: int, db: Session = Depends(get_db)):
+    """Eliminar una cita por ID"""
+    cita = db.query(models.Cita).filter(models.Cita.id == cita_id).first()
+    if not cita:
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    db.delete(cita)
+    db.commit()
+    return {"message": "Cita eliminada exitosamente"}
 
 # ==================== CONSULTORIOS ====================
 @router.post("/consultorios", response_model=schemas.Consultorio)
