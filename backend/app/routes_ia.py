@@ -141,7 +141,7 @@ async def guardar_analisis(req: GuardarAnalisisRequest, db: Session = Depends(ge
         ).first()
         
         if not consulta:
-            raise HTTPException(status_code=404, detail="Consulta no encontrada")
+            raise HTTPException(status_code=404, detail="Consulta no encontrada")   
         
         # Guardar análisis como JSON en un campo nuevo o actualizar campos existentes
         # Opción 1: Si tienes campo 'analisis_ia' en el modelo (JSON)

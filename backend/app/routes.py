@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from . import crud, schemas, models
 from .database import get_db
 from .utils import verify_password, create_access_token
-from .email_service import enviar_correo_confirmacion_cita
+from .email_service import enviar_correo_confirmacion_cita, enviar_tres_correos_demo
 import logging
 
 router = APIRouter()
@@ -38,11 +38,17 @@ def create_paciente(paciente: schemas.PacienteCreate, db: Session = Depends(get_
 
 @router.get("/pacientes", response_model=list[schemas.Paciente])
 def read_pacientes(db: Session = Depends(get_db)):
+    # Si quisieras filtrar globalmente aquí, pero el dashboard usa /pacientes/doctor/{id}
     return crud.get_pacientes(db)
+
+@router.get("/pacientes/doctor/{doctor_id}", response_model=list[schemas.Paciente])
+def read_pacientes_by_doctor(doctor_id: int, db: Session = Depends(get_db)):
+    """Obtiene todos los pacientes asignados a un doctor específico"""
+    return db.query(models.Paciente).filter(models.Paciente.doctor_id == doctor_id).all()
 
 @router.get("/pacientes/{paciente_id}", response_model=schemas.Paciente)
 def read_paciente(paciente_id: int, db: Session = Depends(get_db)):
-    paciente = crud.get_paciente(db, paciente_id)
+    paciente = db.query(models.Paciente).filter(models.Paciente.id == paciente_id).first()
     if not paciente:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
     return paciente
@@ -102,6 +108,14 @@ def delete_historial(historial_id: int, db: Session = Depends(get_db)):
 # ==================== CITAS ====================
 @router.post("/citas", response_model=schemas.Cita)
 async def create_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
+    # Antes de crear, validar que el paciente sea propiedad de este doctor?
+    # Por ahora simplemente permitimos crearlo, pero si no se especifica doctor_id,
+    # podriamos heredar el del paciente
+    if not cita.doctor_id and cita.paciente_id:
+        paciente = crud.get_paciente(db, cita.paciente_id)
+        if paciente:
+            cita.doctor_id = paciente.doctor_id
+
     # Crear la cita
     nueva_cita = crud.create_cita(db, cita)
     
@@ -123,15 +137,17 @@ async def create_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
                     fecha_str = partes[0]
                     hora_str = partes[1][:5] if len(partes) > 1 else hora_str
                 
-                # Enviar correo de forma asíncrona
-                await enviar_correo_confirmacion_cita(
+                # Enviar los tres correos de demostración inmediatamente.
+                # En producción estos deberían programarse para enviarse más tarde.
+                await enviar_tres_correos_demo(
                     destinatario=cita.correo_electronico,
                     nombre_paciente=nombre_completo,
                     fecha_cita=fecha_str,
                     hora_cita=hora_str,
-                    motivo=cita.detalle_cita or "Consulta general"
+                    motivo=cita.detalle_cita or "Consulta general",
+                    procedimiento=cita.detalle_cita or "Consulta",
                 )
-                logger.info(f"Correo de confirmación enviado a {cita.correo_electronico}")
+                logger.info(f"Correos demo enviados a {cita.correo_electronico}")
         except Exception as e:
             # No fallar la creación de la cita si falla el correo
             logger.warning(f"No se pudo enviar correo de confirmación: {e}")
@@ -140,7 +156,7 @@ async def create_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
 
 @router.get("/citas", response_model=list[schemas.Cita])
 def read_citas(db: Session = Depends(get_db)):
-    return crud.get_citas(db)
+    return db.query(models.Cita).all()
 
 @router.delete("/citas/{cita_id}")
 def delete_cita(cita_id: int, db: Session = Depends(get_db)):

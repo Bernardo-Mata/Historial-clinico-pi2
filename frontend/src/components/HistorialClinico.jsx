@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AnalisisIA from './pop-ups/AnalisisIA';
 import NuevaConsulta from './pop-ups/NuevaConsulta';
 import NuevoPaciente from './pop-ups/NuevoPaciente';
@@ -9,6 +9,7 @@ const API_URL = "http://localhost:8000";
 
 export default function HistorialClinico() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showModalAnalisisIA, setShowModalAnalisisIA] = useState(false);
   const [consultaAnalisis, setConsultaAnalisis] = useState(null);
   const [pacientes, setPacientes] = useState([]);
@@ -89,7 +90,19 @@ export default function HistorialClinico() {
 
   // Cargar pacientes al montar el componente
   useEffect(() => {
-    cargarPacientes();
+    cargarPacientes().then(() => {
+      // Intentar cargar desde sessionStorage
+      const pacienteGuardado = sessionStorage.getItem('pacientePreseleccionado');
+      const pacientePreseleccionado = pacienteGuardado ? JSON.parse(pacienteGuardado) : null;
+      
+      if (pacientePreseleccionado) {
+        setPacienteSeleccionado(pacientePreseleccionado);
+        console.log('📌 Paciente preseleccionado desde Dashboard:', pacientePreseleccionado);
+        
+        // Limpiar sessionStorage después de usarlo
+        sessionStorage.removeItem('pacientePreseleccionado');
+      }
+    });
   }, []);
 
   // Cargar historiales cuando se selecciona un paciente
@@ -321,7 +334,7 @@ export default function HistorialClinico() {
 
 
  const analizarConIA = () => {
-    // Navegar al componente de análisis IA con los datos del paciente
+    // Navegar al componente de análisis IA with los datos del paciente
     navigate('/analisis-ia', { 
       state: { 
         paciente: pacienteSeleccionado,
@@ -411,6 +424,16 @@ export default function HistorialClinico() {
                       <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                     </svg>
                     <span>Editar</span>
+                  </button>
+                  {/* Boton de eliminar escondido*/}
+                  <button 
+                    onClick={eliminarPaciente}
+                    className="hidden  flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                      <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.58.218-2.34.425a.75.75 0 00-.5.696V6.25a.75.75 0 00.75.75h.75v8.75A2.25 2.25 0 007.75 18h4.5A2.25 2.25 0 0014.5 15.75V7h.75a.75.75 0 00.75-.75V4.664a.75.75 0 00-.5-.696A18.68 18.68 0 0014 3.75v-.443A2.75 2.75 0 0011.25 1h-2.5zM7.5 4.5v-.75A1.25 1.25 0 018.75 2.5h2.5A1.25 1.25 0 0112.5 3.75v.75h-5z" clipRule="evenodd" />
+                    </svg>
+                    <span>Borrar</span>
                   </button>
                   <button 
                     onClick={() => setShowModalConsulta(true)}

@@ -60,14 +60,17 @@ class PacienteBase(BaseModel):
     telefono: Optional[str] = None
     correo_electronico: Optional[str] = None
     fecha_nacimiento: Optional[datetime] = None
+    doctor_id: Optional[int] = None
 
 class PacienteCreate(PacienteBase):
     pass
 
 class Paciente(PacienteBase):
     id: int
+    doctor_id: Optional[int] = None
     class Config:
         orm_mode = True
+        from_attributes = True
 
 # Historial Clínico
 class HistorialClinicoBase(BaseModel):
@@ -111,7 +114,7 @@ class CitaUpdate(CitaBase):
 
 class Cita(CitaBase):
     id: int
-    paciente_id: int
+    paciente_id: Optional[int] = None
     doctor_id: Optional[int] = None
     consultorio_id: Optional[int] = None
 

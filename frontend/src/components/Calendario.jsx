@@ -36,7 +36,20 @@ export default function Calendario() {
   });
 
   useEffect(() => {
-    cargarDatos();
+    cargarDatosIniciales();
+    
+    // Listener para recargar cuando se crea una cita nueva
+    const handleCitaCreada = (e) => {
+      console.log('✅ Nueva cita detectada:', e.detail.mensaje);
+      cargarDatosIniciales();
+    };
+    
+    window.addEventListener('citaCreada', handleCitaCreada);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('citaCreada', handleCitaCreada);
+    };
   }, []);
 
   const getAuthHeaders = () => {
@@ -47,7 +60,7 @@ export default function Calendario() {
     };
   };
 
-  const cargarDatos = async () => {
+  const cargarDatosIniciales = async () => {
     try {
       setLoading(true);
       await Promise.all([
@@ -159,27 +172,28 @@ export default function Calendario() {
   const agregarCita = async (e) => {
     e.preventDefault();
     
+    // Combinar fecha y hora en un solo string datetime
+    const fechaHoraCombinada = `${nuevaCita.fecha_cita}T${nuevaCita.hora}:00`;
+    
+    const citaData = {
+      paciente_id: parseInt(nuevaCita.paciente_id),
+      doctor_id: parseInt(nuevaCita.doctor_id),
+      fecha_cita: fechaHoraCombinada, // Ahora incluye la hora
+      detalle_cita: nuevaCita.detalle_cita || null,
+      correo_electronico: nuevaCita.correo_electronico || null,
+      telefono: nuevaCita.telefono || null,
+    };
+
+    console.log('📅 Enviando cita con fecha y hora:', fechaHoraCombinada);
+
     try {
-      // Combinar fecha y hora
-      const fechaHoraCompleta = `${nuevaCita.fecha_cita}T${nuevaCita.hora}:00`;
-      
-      const pacienteSeleccionado = pacientes.find(p => p.id === parseInt(nuevaCita.paciente_id));
-      
-      const payload = {
-        paciente_id: parseInt(nuevaCita.paciente_id),
-        doctor_id: nuevaCita.doctor_id ? parseInt(nuevaCita.doctor_id) : null,
-        fecha_cita: fechaHoraCompleta,
-        detalle_cita: nuevaCita.detalle_cita,
-        telefono: nuevaCita.telefono || pacienteSeleccionado?.telefono || '',
-        correo_electronico: nuevaCita.correo_electronico || pacienteSeleccionado?.correo_electronico || ''
-      };
-
-      console.log('Enviando cita:', payload);
-
       const response = await fetch(`${API_URL}/citas`, {
         method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload)
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(citaData)
       });
 
       if (!response.ok) {
@@ -188,6 +202,11 @@ export default function Calendario() {
       }
 
       await cargarCitas();
+      
+      // Disparar evento para que Dashboard se actualice
+      window.dispatchEvent(new CustomEvent('citaCreada'));
+      console.log('✅ Evento citaCreada disparado');
+      
       setShowModal(false);
       setNuevaCita({
         paciente_id: '',

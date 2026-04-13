@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import NuevaConsulta from './pop-ups/NuevaConsulta';
 
 const API_URL = "http://localhost:8000";
 
@@ -8,6 +9,8 @@ export default function Dashboard() {
   const [citasHoy, setCitasHoy] = useState([]);
   const [pacienteSeleccionado, setPacienteSeleccionado] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showModalNuevaCita, setShowModalNuevaCita] = useState(false);
+  const [showModalConsulta, setShowModalConsulta] = useState(false);
   const [estadisticas, setEstadisticas] = useState({
     totalPacientes: 0,
     citasHoy: 0,
@@ -16,6 +19,29 @@ export default function Dashboard() {
 
   useEffect(() => {
     cargarDatosIniciales();
+    
+    // Listener para recargar cuando se crea una cita
+    const handleCitaCreada = () => {
+      console.log('📢 Dashboard detectó nueva cita - recargando...');
+      cargarDatosIniciales();
+    };
+    
+    window.addEventListener('citaCreada', handleCitaCreada);
+    
+    return () => {
+      window.removeEventListener('citaCreada', handleCitaCreada);
+    };
+  }, []);
+  
+  // Agregar otro useEffect para detectar cuando se navega de vuelta al Dashboard
+  useEffect(() => {
+    // Este efecto se ejecuta cada vez que el componente se monta
+    // (por ejemplo, cuando navegas de vuelta desde otra ruta)
+    const interval = setInterval(() => {
+      cargarCitasHoy();
+    }, 30000); // Actualizar cada 30 segundos
+    
+    return () => clearInterval(interval);
   }, []);
 
   const getAuthHeaders = () => {
@@ -42,13 +68,26 @@ export default function Dashboard() {
 
   const cargarCitasHoy = async () => {
     try {
-      const response = await fetch(`${API_URL}/citas`, {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const doctorId = user?.doctor_id;
+
+      let url = `${API_URL}/citas`;
+      // Si tenemos doctorId, podriamos filtrar en backend, 
+      // pero por ahora filtramos en frontend para no romper otros componentes
+      
+      const response = await fetch(url, {
         headers: getAuthHeaders()
       });
 
       if (!response.ok) throw new Error('Error al cargar citas');
 
-      const todasCitas = await response.json();
+      let todasCitas = await response.json();
+      
+      // FILTRADO POR DOCTOR
+      if (doctorId) {
+        todasCitas = todasCitas.filter(cita => cita.doctor_id === doctorId);
+      }
       
       // Filtrar citas de hoy
       const hoy = new Date().toISOString().split('T')[0];
@@ -71,6 +110,7 @@ export default function Dashboard() {
 
   const cargarDatosPaciente = async (pacienteId) => {
     try {
+      if (!pacienteId) return;
       console.log('🔍 Cargando paciente ID:', pacienteId);
       
       const response = await fetch(`${API_URL}/pacientes/${pacienteId}`, {
@@ -90,8 +130,17 @@ export default function Dashboard() {
 
   const cargarEstadisticas = async () => {
     try {
-      // Cargar total de pacientes
-      const pacientesResponse = await fetch(`${API_URL}/pacientes`, {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const doctorId = user?.doctor_id;
+
+      // Cargar pacientes
+      let urlPacientes = `${API_URL}/pacientes`;
+      if (doctorId) {
+        urlPacientes = `${API_URL}/pacientes/doctor/${doctorId}`;
+      }
+      
+      const pacientesResponse = await fetch(urlPacientes, {
         headers: getAuthHeaders()
       });
 
@@ -104,8 +153,13 @@ export default function Dashboard() {
         });
 
         if (citasResponse.ok) {
-          const todasCitas = await citasResponse.json();
+          let todasCitas = await citasResponse.json();
           
+          // FILTRADO POR DOCTOR
+          if (doctorId) {
+            todasCitas = todasCitas.filter(cita => cita.doctor_id === doctorId);
+          }
+
           const hoy = new Date();
           const inicioSemana = new Date(hoy);
           inicioSemana.setDate(hoy.getDate() - hoy.getDay());
@@ -145,12 +199,30 @@ export default function Dashboard() {
     });
   };
 
-  const verHistorialCompleto = () => {
-    navigate('/historial-clinico');
+  const irACalendario = () => {
+    console.log('Abriendo modal de nueva cita...');
+    setShowModalNuevaCita(true);
   };
 
-  const irACalendario = () => {
-    navigate('/calendario');
+  const verHistorialCompleto = () => {
+    console.log('Abriendo modal de nueva consulta para:', pacienteSeleccionado);
+    
+    if (pacienteSeleccionado) {
+      setShowModalConsulta(true);
+    } else {
+      alert('Por favor selecciona un paciente primero');
+    }
+  };
+
+  const handleCitaCreada = () => {
+    setShowModalNuevaCita(false);
+    cargarDatosIniciales(); // Recargar todo
+  };
+  
+  const handleConsultaGuardada = () => {
+    setShowModalConsulta(false);
+    // Opcional: mostrar mensaje de éxito
+    alert('Consulta guardada exitosamente');
   };
 
   if (loading) {
@@ -217,6 +289,7 @@ export default function Dashboard() {
             <button 
               onClick={irACalendario}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold p-2 rounded-lg shadow-lg transition duration-150 ease-in-out"
+              title="Crear nueva cita"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -314,7 +387,7 @@ export default function Dashboard() {
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150 ease-in-out mt-8 flex items-center justify-center"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                   Ver Historial Completo
                 </button>
@@ -333,6 +406,260 @@ export default function Dashboard() {
         </aside>
 
       </div>
+
+      {/* Modal Nueva Cita */}
+      {showModalNuevaCita && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-blue-600 text-white p-4 rounded-t-lg flex items-center justify-between sticky top-0">
+              <h3 className="text-xl font-bold">Nueva Cita</h3>
+              <button 
+                onClick={() => setShowModalNuevaCita(false)}
+                className="text-white hover:text-gray-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6">
+                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              <FormularioNuevaCita 
+                onCitaCreada={handleCitaCreada}
+                onCancelar={() => setShowModalNuevaCita(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nueva Consulta */}
+      {showModalConsulta && pacienteSeleccionado && (
+        <NuevaConsulta
+          paciente={pacienteSeleccionado}
+          onClose={() => setShowModalConsulta(false)}
+          onSaved={handleConsultaGuardada}
+        />
+      )}
     </div>
+  );
+}
+
+// Componente para el formulario de nueva cita
+function FormularioNuevaCita({ onCitaCreada, onCancelar }) {
+  const [pacientes, setPacientes] = useState([]);
+  const [doctores, setDoctores] = useState([]);
+  const [formData, setFormData] = useState({
+    paciente_id: '',
+    doctor_id: '',
+    fecha_cita: '',
+    detalle_cita: '',
+    telefono: '',
+    correo_electronico: ''
+  });
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+  };
+
+  useEffect(() => {
+    cargarPacientesYDoctores();
+  }, []);
+
+  const cargarPacientesYDoctores = async () => {
+    try {
+      const [pacientesRes, doctoresRes] = await Promise.all([
+        fetch(`${API_URL}/pacientes`, { headers: getAuthHeaders() }),
+        fetch(`${API_URL}/doctores`, { headers: getAuthHeaders() })
+      ]);
+
+      if (pacientesRes.ok) {
+        const pacientesData = await pacientesRes.json();
+        setPacientes(pacientesData);
+      }
+
+      if (doctoresRes.ok) {
+        const doctoresData = await doctoresRes.json();
+        setDoctores(doctoresData);
+      }
+    } catch (err) {
+      console.error('Error al cargar datos:', err);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const citaData = {
+      paciente_id: parseInt(formData.paciente_id),
+      doctor_id: parseInt(formData.doctor_id),
+      fecha_cita: formData.fecha_cita,
+      detalle_cita: formData.detalle_cita || null,
+      correo_electronico: formData.correo_electronico || null,
+      telefono: formData.telefono || null,
+    };
+
+    try {
+      const response = await fetch(`${API_URL}/citas`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(citaData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Error al crear cita');
+      }
+
+      // Disparar evento para actualizar otras partes del sistema
+      window.dispatchEvent(new CustomEvent('citaCreada'));
+      
+      alert('✅ Cita creada exitosamente');
+      onCitaCreada();
+    } catch (err) {
+      console.error('Error:', err);
+      alert('❌ Error al crear cita: ' + err.message);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    // Auto-llenar teléfono y correo cuando se selecciona un paciente
+    if (name === 'paciente_id' && value) {
+      const paciente = pacientes.find(p => p.id === parseInt(value));
+      if (paciente) {
+        setFormData(prev => ({
+          ...prev,
+          telefono: paciente.telefono || '',
+          correo_electronico: paciente.correo_electronico || ''
+        }));
+      }
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Paciente *
+        </label>
+        <select
+          name="paciente_id"
+          value={formData.paciente_id}
+          onChange={handleChange}
+          required
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Seleccionar paciente</option>
+          {pacientes.map(paciente => (
+            <option key={paciente.id} value={paciente.id}>
+              {paciente.nombre} {paciente.apellidos}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Doctor *
+        </label>
+        <select
+          name="doctor_id"
+          value={formData.doctor_id}
+          onChange={handleChange}
+          required
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Seleccionar doctor</option>
+          {doctores.map(doctor => (
+            <option key={doctor.id} value={doctor.id}>
+              Dr. {doctor.usuario?.nombre} {doctor.usuario?.apellidos}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Fecha y Hora *
+        </label>
+        <input
+          type="datetime-local"
+          name="fecha_cita"
+          value={formData.fecha_cita}
+          onChange={handleChange}
+          required
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Motivo de la Cita
+        </label>
+        <textarea
+          name="detalle_cita"
+          value={formData.detalle_cita}
+          onChange={handleChange}
+          rows="3"
+          placeholder="Ej: Revisión general, dolor molar..."
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Teléfono
+        </label>
+        <input
+          type="tel"
+          name="telefono"
+          value={formData.telefono}
+          onChange={handleChange}
+          placeholder="442-123-4567"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Correo Electrónico (para confirmación)
+        </label>
+        <input
+          type="email"
+          name="correo_electronico"
+          value={formData.correo_electronico}
+          onChange={handleChange}
+          placeholder="paciente@email.com"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Se enviará un correo de confirmación automáticamente
+        </p>
+      </div>
+
+      <div className="flex gap-3 pt-4">
+        <button
+          type="button"
+          onClick={onCancelar}
+          className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg transition"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+        >
+          Crear Cita
+        </button>
+      </div>
+    </form>
   );
 }

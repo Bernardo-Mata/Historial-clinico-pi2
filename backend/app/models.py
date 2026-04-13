@@ -48,8 +48,10 @@ class Paciente(Base):
     telefono = Column(String(300))
     correo_electronico = Column(String(300))
     fecha_nacimiento = Column(DateTime)
+    doctor_id = Column(Integer, ForeignKey("doctor.id"), nullable=True) # Relación con el doctor que lo creó
     historiales = relationship("HistorialClinico", back_populates="paciente")
     citas = relationship("Cita", back_populates="paciente")
+    doctor = relationship("Doctor", backref="pacientes")
 
 # Historial Clínico
 class HistorialClinico(Base):

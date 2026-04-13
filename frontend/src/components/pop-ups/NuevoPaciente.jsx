@@ -45,11 +45,21 @@ export default function NuevoPaciente({ onClose, onCreated }) {
     e.preventDefault();
     setLoading(true);
     try {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const doctorId = user?.doctor_id;
+
       const edadCalculada = calcularEdad(form.fecha_nacimiento);
+      const payload = { 
+        ...form, 
+        edad: edadCalculada,
+        doctor_id: doctorId // Asignar el doctor actual
+      };
+
       const response = await fetch(`${API_URL}/pacientes`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ ...form, edad: edadCalculada })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {

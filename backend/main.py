@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import jwt
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
+from app import models
 from app.models import Usuario
 from app.utils import verify_password, create_access_token, decode_access_token, SECRET_KEY, ALGORITHM
 from app.routes import router as api_router
@@ -58,8 +59,22 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     user = db.query(Usuario).filter(Usuario.correo_electronico == form_data.username).first()
     if not user or not verify_password(form_data.password, user.contrasena):
         raise HTTPException(status_code=400, detail="Credenciales incorrectas")
+    
+    # Buscar el ID del doctor asociado a este usuario
+    doctor = db.query(models.Doctor).filter(models.Doctor.correo_electronico == user.correo_electronico).first()
+    doctor_id = doctor.id if doctor else None
+
     access_token = create_access_token(data={"sub": user.correo_electronico})
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "nombre": user.nombre,
+            "correo_electronico": user.correo_electronico,
+            "doctor_id": doctor_id
+        }
+    }
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
