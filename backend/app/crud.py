@@ -102,6 +102,18 @@ def create_historial(db: Session, historial: schemas.HistorialClinicoCreate):
     db.refresh(db_historial)
     return db_historial
 
+# ==================== FEEDBACK ====================
+def create_feedback(db: Session, feedback: schemas.FeedbackCreate):
+    db_feedback = models.Feedback(**feedback.dict())
+    db.add(db_feedback)
+    db.commit()
+    db.refresh(db_feedback)
+    return db_feedback
+
+def get_feedback_by_paciente(db: Session, paciente_id: int):
+    return db.query(models.Feedback).filter(models.Feedback.paciente_id == paciente_id).all()
+    
+
 def get_historiales(db: Session):
     return db.query(models.HistorialClinico).all()
 

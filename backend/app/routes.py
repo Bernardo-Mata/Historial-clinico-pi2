@@ -9,6 +9,8 @@ from .database import get_db
 from .utils import verify_password, create_access_token
 from .email_service import enviar_correo_confirmacion_cita, enviar_tres_correos_demo
 import logging
+from app.feedback_submitter import guardar_feedback
+from pydantic import BaseModel
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
@@ -48,6 +50,19 @@ def read_pacientes_by_doctor(doctor_id: int, db: Session = Depends(get_db)):
 
 @router.get("/pacientes/{paciente_id}", response_model=schemas.Paciente)
 def read_paciente(paciente_id: int, db: Session = Depends(get_db)):
+    db_paciente = crud.get_paciente(db, paciente_id=paciente_id)
+    if db_paciente is None:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    return db_paciente
+
+# ==================== FEEDBACK ====================
+@router.post("/feedback", response_model=schemas.Feedback)
+def post_feedback(feedback: schemas.FeedbackCreate, db: Session = Depends(get_db)):
+    return crud.create_feedback(db, feedback)
+
+@router.get("/feedback/paciente/{paciente_id}", response_model=list[schemas.Feedback])
+def get_feedback_paciente(paciente_id: int, db: Session = Depends(get_db)):
+    return crud.get_feedback_by_paciente(db, paciente_id)
     paciente = db.query(models.Paciente).filter(models.Paciente.id == paciente_id).first()
     if not paciente:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
@@ -118,7 +133,7 @@ async def create_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
 
     # Crear la cita
     nueva_cita = crud.create_cita(db, cita)
-    
+
     # Enviar correo de confirmación si hay email
     if cita.correo_electronico:
         try:
@@ -126,17 +141,17 @@ async def create_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
             paciente = crud.get_paciente(db, cita.paciente_id)
             if paciente:
                 nombre_completo = f"{paciente.nombre} {paciente.apellidos}"
-                
+
                 # Extraer hora de fecha_cita si es datetime, o usar un valor por defecto
                 fecha_str = str(cita.fecha_cita)
                 hora_str = "Por confirmar"
-                
+
                 # Si fecha_cita incluye hora (formato: "YYYY-MM-DD HH:MM:SS")
                 if " " in fecha_str:
                     partes = fecha_str.split(" ")
                     fecha_str = partes[0]
                     hora_str = partes[1][:5] if len(partes) > 1 else hora_str
-                
+
                 # Enviar los tres correos de demostración inmediatamente.
                 # En producción estos deberían programarse para enviarse más tarde.
                 await enviar_tres_correos_demo(
@@ -146,12 +161,13 @@ async def create_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
                     hora_cita=hora_str,
                     motivo=cita.detalle_cita or "Consulta general",
                     procedimiento=cita.detalle_cita or "Consulta",
+                    paciente_id=paciente.id  # <-- PASA EL ID DEL PACIENTE AQUÍ
                 )
                 logger.info(f"Correos demo enviados a {cita.correo_electronico}")
         except Exception as e:
             # No fallar la creación de la cita si falla el correo
             logger.warning(f"No se pudo enviar correo de confirmación: {e}")
-    
+
     return nueva_cita
 
 @router.get("/citas", response_model=list[schemas.Cita])
@@ -185,3 +201,21 @@ def create_doctor_consultorio(dc: schemas.DoctorConsultorioCreate, db: Session =
 @router.get("/doctor_consultorios", response_model=list[schemas.DoctorConsultorio])
 def read_doctor_consultorios(db: Session = Depends(get_db)):
     return crud.get_doctor_consultorios(db)
+
+# ==================== FEEDBACK FORM ====================
+class FeedbackInput(BaseModel):
+    paciente_id: int
+    nivel_dolor: int
+    control_medicacion: str
+    sangrado: str
+    inflamacion: str
+    fiebre: bool
+    dificultad_tragar: bool
+    mal_sabor: bool
+    entumecimiento: bool
+    doctor_id: int | None = None
+
+@router.post("/feedback-form", status_code=201)
+def submit_feedback_form(feedback: FeedbackInput):
+    nuevo_feedback = guardar_feedback(**feedback.dict())
+    return {"message": "Feedback guardado", "feedback_id": nuevo_feedback.id}

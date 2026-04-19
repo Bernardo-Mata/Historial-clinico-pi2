@@ -48,6 +48,27 @@ class Doctor(DoctorBase):
     class Config:
         orm_mode = True
 
+# Feedback
+class FeedbackBase(BaseModel):
+    nivel_dolor: int
+    control_medicacion: str
+    sangrado: str
+    inflamacion: str
+    fiebre: bool
+    dificultad_tragar: bool
+    mal_sabor: bool
+    entumecimiento: bool
+
+class FeedbackCreate(FeedbackBase):
+    paciente_id: int
+
+class Feedback(FeedbackBase):
+    id: int
+    paciente_id: int
+    fecha_registro: datetime
+    class Config:
+        orm_mode = True
+
 # Paciente
 class PacienteBase(BaseModel):
     nombre: str

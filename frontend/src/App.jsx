@@ -6,6 +6,7 @@ import MainLayout from './components/MainLayout';
 import Dashboard from './components/Dashboard';
 import HistorialClinico from './components/HistorialClinico';
 import Calendario from './components/Calendario';
+import FormularioFeedback from './components/FormularioFeedback';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -36,6 +37,8 @@ function App() {
         <Route path="historial-clinico" element={<HistorialClinico />} />
         <Route path="calendario" element={<Calendario />} />
       </Route>
+
+      <Route path="/feedback/:pacienteId" element={<FormularioFeedback />} />
 
       {/* Redirigir cualquier ruta no encontrada */}
       <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />

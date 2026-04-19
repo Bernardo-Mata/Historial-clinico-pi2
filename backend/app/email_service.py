@@ -244,6 +244,7 @@ async def enviar_tres_correos_demo(
     motivo: str = "Consulta general",
     procedimiento: str = "Procedimiento",
     formulario_url: str = None,
+    paciente_id: int = None
   ) -> bool:
     """
     Envía tres correos de demostración tras registro/agendamiento:
@@ -277,14 +278,14 @@ async def enviar_tres_correos_demo(
 
     # Enviar solicitud de feedback postoperatorio (24 horas) inmediatamente
     try:
-      formulario_url = formulario_url or os.getenv("FORMULARIO_URL", "https://example.com/formulario")
+      formulario_url = formulario_url or os.getenv("FORMULARIO_URL", "http://localhost:8000/feedback")
       feedback = generar_mensaje_postoperatorio_feedback(
         destinatario=destinatario,
         nombre_paciente=nombre_paciente,
         procedimiento=procedimiento,
         horas_postop=24,
-        formulario_url=formulario_url,
-      )
+        paciente_id=paciente_id  # <-- asegúrate de tener esta variable disponible
+    )
       await enviar_mensaje(feedback)
     except Exception:
       logger.warning("Fallo enviando mensaje de feedback postoperatorio (demo)")
@@ -297,13 +298,16 @@ def generar_mensaje_postoperatorio_feedback(
     nombre_paciente: str,
     procedimiento: str,
     horas_postop: int,
-    formulario_url: str
+    paciente_id: int
 ) -> MIMEMultipart:
     """
     Genera el correo que solicita feedback postoperatorio (escala 1-10).
     - `horas_postop`: 24, 48 o 72 (se inserta en asunto y cuerpo).
-    - `formulario_url`: URL al formulario web interactivo.
+    - `paciente_id`: ID del paciente para armar la URL del formulario.
     """
+    # Ajustar esta URL según el dominio real de tu frontend
+    formulario_url = f"http://localhost:5173/feedback/{paciente_id}"
+    
     mensaje = MIMEMultipart("alternative")
     mensaje["Subject"] = f"Formulario post-operatorio — {procedimiento} — {horas_postop} horas"
     mensaje["To"] = destinatario

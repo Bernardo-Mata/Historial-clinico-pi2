@@ -48,9 +48,26 @@ class Paciente(Base):
     telefono = Column(String(300))
     correo_electronico = Column(String(300))
     fecha_nacimiento = Column(DateTime)
-    doctor_id = Column(Integer, ForeignKey("doctor.id"), nullable=True) # Relación con el doctor que lo creó
+    feedback = relationship("Feedback", back_populates="paciente")
     historiales = relationship("HistorialClinico", back_populates="paciente")
     citas = relationship("Cita", back_populates="paciente")
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+    id = Column(Integer, primary_key=True, index=True)
+    paciente_id = Column(Integer, ForeignKey("paciente.id"))
+    nivel_dolor = Column(Integer)  # 0-10
+    control_medicacion = Column(String(100))  # Sí / Parcialmente / No
+    sangrado = Column(String(100))  # Nulo / Mancha leve / Activo
+    inflamacion = Column(String(100))  # Normal / Un poco hinchada / Muy hinchada
+    fiebre = Column(Boolean, default=False)
+    dificultad_tragar = Column(Boolean, default=False)
+    mal_sabor = Column(Boolean, default=False)
+    entumecimiento = Column(Boolean, default=False)
+    fecha_registro = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    paciente = relationship("Paciente", back_populates="feedback")
+    doctor_id = Column(Integer, ForeignKey("doctor.id"), nullable=True) # Relación con el doctor que lo creó
     doctor = relationship("Doctor", backref="pacientes")
 
 # Historial Clínico
