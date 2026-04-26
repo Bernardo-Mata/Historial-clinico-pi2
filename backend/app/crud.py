@@ -3,6 +3,8 @@
 # Operaciones CRUD seguras para todos los modelos
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func    
+from datetime import date, timedelta
 from . import models, schemas
 from .utils import get_password_hash
 
@@ -64,7 +66,7 @@ def get_doctor(db: Session, doctor_id: int):
 
 # ==================== PACIENTE ====================
 def create_paciente(db: Session, paciente: schemas.PacienteCreate):
-    db_paciente = models.Paciente(**paciente.dict())
+    db_paciente = models.Paciente(**paciente.dict(exclude={"doctor_id"}))
     db.add(db_paciente)
     db.commit()
     db.refresh(db_paciente)
@@ -155,6 +157,48 @@ def get_citas(db: Session):
 
 def get_cita(db: Session, cita_id: int):
     return db.query(models.Cita).filter(models.Cita.id == cita_id).first()
+
+# ==================== CITA ====================
+def create_cita(db: Session, cita: schemas.CitaCreate):
+    db_cita = models.Cita(**cita.dict())
+    db.add(db_cita)
+    db.commit()
+    db.refresh(db_cita)
+    return db_cita
+
+def get_citas(db: Session):
+    return db.query(models.Cita).all()
+
+def get_cita(db: Session, cita_id: int):
+    return db.query(models.Cita).filter(models.Cita.id == cita_id).first()
+
+
+
+def checkin_paciente(db: Session, telefono: str):
+    # buscar al paciente por telefono
+    paciente = db.query(models.Paciente).filter(models.Paciente.telefono == telefono).first()
+    if not paciente:
+        return None, "No encontramos ningún paciente registrado con este teléfono."
+    
+    # buscar cita de hoy
+    hoy = date.today()
+    manana = hoy + timedelta(days=1)
+    
+    cita = db.query(models.Cita).filter(
+        models.Cita.paciente_id == paciente.id,
+        models.Cita.fecha_cita >= hoy,
+        models.Cita.fecha_cita < manana
+    ).first()
+
+    if not cita:
+        return None, f"Hola {paciente.nombre}, no tienes ninguna cita programada para hoy."
+    
+    # actualizar el estado 
+    cita.estado = "En sala de espera"
+    db.commit()
+    db.refresh(cita)
+    
+    return cita, f"¡Llegada confirmada, {paciente.nombre}! Pasa a la sala de espera."
 
 # ==================== CONSULTORIO ====================
 def create_consultorio(db: Session, consultorio: schemas.ConsultorioCreate):

@@ -7,6 +7,7 @@ import Dashboard from './components/Dashboard';
 import HistorialClinico from './components/HistorialClinico';
 import Calendario from './components/Calendario';
 import FormularioFeedback from './components/FormularioFeedback';
+import CheckIn from './components/CheckIn';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -21,6 +22,7 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
       <Route path="/register" element={<Register />} />
+      <Route path="check-in" element={<CheckIn />} />
       
       {/* Rutas protegidas */}
       <Route

@@ -122,6 +122,7 @@ class CitaBase(BaseModel):
     detalle_cita: Optional[str] = None
     telefono: Optional[str] = None
     correo_electronico: Optional[str] = None
+    estado: Optional[str] = None
 
 class CitaCreate(CitaBase):
     paciente_id: int

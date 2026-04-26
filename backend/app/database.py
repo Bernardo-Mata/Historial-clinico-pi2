@@ -18,11 +18,11 @@ def get_db():
     finally:
         db.close()
 
-# Usar los nombres de variables que tienes en tu .env
-MYSQL_USER = os.getenv("DB_USER")
-MYSQL_PASSWORD = os.getenv("DB_PASSWORD")
-MYSQL_HOST = os.getenv("DB_HOST")
-MYSQL_DB = os.getenv("DB_NAME")
+# Usar los nombres de variables en .env
+MYSQL_USER = os.getenv("MYSQL_USER")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
+MYSQL_HOST = os.getenv("MYSQL_HOST")
+MYSQL_DB = os.getenv("MYSQL_DB")
 
 
 SQLALCHEMY_DATABASE_URL = (

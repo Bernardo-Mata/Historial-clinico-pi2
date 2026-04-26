@@ -19,20 +19,20 @@ export default function Dashboard() {
 
   useEffect(() => {
     cargarDatosIniciales();
-    
+
     // Listener para recargar cuando se crea una cita
     const handleCitaCreada = () => {
       console.log('📢 Dashboard detectó nueva cita - recargando...');
       cargarDatosIniciales();
     };
-    
+
     window.addEventListener('citaCreada', handleCitaCreada);
-    
+
     return () => {
       window.removeEventListener('citaCreada', handleCitaCreada);
     };
   }, []);
-  
+
   // Agregar otro useEffect para detectar cuando se navega de vuelta al Dashboard
   useEffect(() => {
     // Este efecto se ejecuta cada vez que el componente se monta
@@ -40,9 +40,10 @@ export default function Dashboard() {
     const interval = setInterval(() => {
       cargarCitasHoy();
     }, 30000); // Actualizar cada 30 segundos
-    
+
     return () => clearInterval(interval);
   }, []);
+
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
@@ -75,7 +76,7 @@ export default function Dashboard() {
       let url = `${API_URL}/citas`;
       // Si tenemos doctorId, podriamos filtrar en backend, 
       // pero por ahora filtramos en frontend para no romper otros componentes
-      
+
       const response = await fetch(url, {
         headers: getAuthHeaders()
       });
@@ -83,12 +84,13 @@ export default function Dashboard() {
       if (!response.ok) throw new Error('Error al cargar citas');
 
       let todasCitas = await response.json();
-      
+      console.log("Citas raw del servidor:", todasCitas.map(c => ({ id: c.id, estado: c.estado })));
+
       // FILTRADO POR DOCTOR
       if (doctorId) {
         todasCitas = todasCitas.filter(cita => cita.doctor_id === doctorId);
       }
-      
+
       // Filtrar citas de hoy
       const hoy = new Date().toISOString().split('T')[0];
       const citasDeHoy = todasCitas.filter(cita => {
@@ -108,11 +110,32 @@ export default function Dashboard() {
     }
   };
 
+  const getEstadoCita = (cita) => {
+    // en sala de espera/confirmado
+    const estadoActual = cita.estado ? cita.estado.trim() : "";
+
+    if (estadoActual === "En sala de espera") {
+      return { texto: "Confirmado", color: "text-green-600 bg-green-100" };
+    }
+
+    // tolerancia de 10 minutos
+    const ahora = new Date();
+    const horaCita = new Date(cita.fecha_cita);
+    const limite = new Date(horaCita.getTime() + 15 * 60000);
+
+    if (ahora > limite) {
+      return { texto: "No asistió", color: "text-red-600 bg-red-100" };
+    }
+
+    // pendiente
+    return { texto: "En espera", color: "text-orange-600 bg-orange-100" };
+  };
+
   const cargarDatosPaciente = async (pacienteId) => {
     try {
       if (!pacienteId) return;
       console.log('🔍 Cargando paciente ID:', pacienteId);
-      
+
       const response = await fetch(`${API_URL}/pacientes/${pacienteId}`, {
         headers: getAuthHeaders()
       });
@@ -139,14 +162,14 @@ export default function Dashboard() {
       if (doctorId) {
         urlPacientes = `${API_URL}/pacientes/doctor/${doctorId}`;
       }
-      
+
       const pacientesResponse = await fetch(urlPacientes, {
         headers: getAuthHeaders()
       });
 
       if (pacientesResponse.ok) {
         const pacientes = await pacientesResponse.json();
-        
+
         // Cargar todas las citas
         const citasResponse = await fetch(`${API_URL}/citas`, {
           headers: getAuthHeaders()
@@ -154,7 +177,7 @@ export default function Dashboard() {
 
         if (citasResponse.ok) {
           let todasCitas = await citasResponse.json();
-          
+
           // FILTRADO POR DOCTOR
           if (doctorId) {
             todasCitas = todasCitas.filter(cita => cita.doctor_id === doctorId);
@@ -192,10 +215,10 @@ export default function Dashboard() {
   const formatearHora = (fechaHora) => {
     if (!fechaHora) return 'N/A';
     const fecha = new Date(fechaHora);
-    return fecha.toLocaleTimeString('es-MX', { 
-      hour: '2-digit', 
+    return fecha.toLocaleTimeString('es-MX', {
+      hour: '2-digit',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     });
   };
 
@@ -206,7 +229,7 @@ export default function Dashboard() {
 
   const verHistorialCompleto = () => {
     console.log('Abriendo modal de nueva consulta para:', pacienteSeleccionado);
-    
+
     if (pacienteSeleccionado) {
       setShowModalConsulta(true);
     } else {
@@ -218,7 +241,7 @@ export default function Dashboard() {
     setShowModalNuevaCita(false);
     cargarDatosIniciales(); // Recargar todo
   };
-  
+
   const handleConsultaGuardada = () => {
     setShowModalConsulta(false);
     // Opcional: mostrar mensaje de éxito
@@ -283,10 +306,10 @@ export default function Dashboard() {
 
         {/* Agenda Section */}
         <section className="flex-1">
-          
+
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold text-gray-800">Agenda de Hoy</h2>
-            <button 
+            <button
               onClick={irACalendario}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold p-2 rounded-lg shadow-lg transition duration-150 ease-in-out"
               title="Crear nueva cita"
@@ -304,7 +327,7 @@ export default function Dashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <p className="text-gray-500 text-lg">No hay citas programadas para hoy</p>
-                <button 
+                <button
                   onClick={irACalendario}
                   className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150"
                 >
@@ -312,35 +335,49 @@ export default function Dashboard() {
                 </button>
               </div>
             ) : (
-              citasHoy.map((cita) => (
-                <div 
-                  key={cita.id} 
-                  className="bg-white hover:bg-gray-50 p-5 rounded-lg shadow-md flex items-center justify-between cursor-pointer hover:shadow-lg transition-all border-l-4 border-blue-500"
-                  onClick={() => cargarDatosPaciente(cita.paciente_id)}
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-blue-100 p-3 rounded-full">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              citasHoy.map((cita) => {
+                // Llamamos función para obtener estado
+                const { texto, color } = getEstadoCita(cita);
+
+                return (
+                  <div
+                    key={cita.id}
+                    className="bg-white hover:bg-gray-50 p-5 rounded-lg shadow-md flex items-center justify-between cursor-pointer hover:shadow-lg transition-all border-l-4 border-blue-500"
+                    onClick={() => cargarDatosPaciente(cita.paciente_id)}
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="bg-blue-100 p-3 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="font-bold text-gray-800 text-lg">{formatearHora(cita.fecha_cita)}</div>
+                        <div className="text-gray-600 text-sm">{cita.detalle_cita || 'Consulta general'}</div>
+                      </div>
+                    </div>
+
+                    {/*  Teléfono y estado */}
+                    <div className="flex items-center space-x-6">
+                      <div className="flex flex-col items-end">
+                        {cita.telefono && (
+                          <div className="text-sm text-gray-500 mb-1">
+                            📞 {cita.telefono}
+                          </div>
+                        )}
+                        {/* estado */}
+                        <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded ${color}`}>
+                          {texto}
+                        </span>
+                      </div>
+
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
-                    <div>
-                      <div className="font-bold text-gray-800 text-lg">{formatearHora(cita.fecha_cita)}</div>
-                      <div className="text-gray-600 text-sm">{cita.detalle_cita || 'Consulta general'}</div>
-                    </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    {cita.telefono && (
-                      <div className="text-sm text-gray-500">
-                        📞 {cita.telefono}
-                      </div>
-                    )}
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </section>
@@ -358,7 +395,7 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-            
+
             {pacienteSeleccionado ? (
               <>
                 <div className="space-y-6">
@@ -369,7 +406,7 @@ export default function Dashboard() {
                       {pacienteSeleccionado.nombre} {pacienteSeleccionado.apellidos}
                     </p>
                   </div>
-                  
+
                   {/* Teléfono */}
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Teléfono</label>
@@ -382,7 +419,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <button 
+                <button
                   onClick={verHistorialCompleto}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150 ease-in-out mt-8 flex items-center justify-center"
                 >
@@ -413,7 +450,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="bg-blue-600 text-white p-4 rounded-t-lg flex items-center justify-between sticky top-0">
               <h3 className="text-xl font-bold">Nueva Cita</h3>
-              <button 
+              <button
                 onClick={() => setShowModalNuevaCita(false)}
                 className="text-white hover:text-gray-200"
               >
@@ -423,7 +460,7 @@ export default function Dashboard() {
               </button>
             </div>
             <div className="p-6">
-              <FormularioNuevaCita 
+              <FormularioNuevaCita
                 onCitaCreada={handleCitaCreada}
                 onCancelar={() => setShowModalNuevaCita(false)}
               />
@@ -515,7 +552,7 @@ function FormularioNuevaCita({ onCitaCreada, onCancelar }) {
 
       // Disparar evento para actualizar otras partes del sistema
       window.dispatchEvent(new CustomEvent('citaCreada'));
-      
+
       alert('✅ Cita creada exitosamente');
       onCitaCreada();
     } catch (err) {

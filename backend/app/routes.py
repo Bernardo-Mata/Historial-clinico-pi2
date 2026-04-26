@@ -121,6 +121,20 @@ def delete_historial(historial_id: int, db: Session = Depends(get_db)):
     return historial
 
 # ==================== CITAS ====================
+class CheckInRequest(BaseModel):
+    telefono: str
+
+@router.post("/check-in")
+def confirmar_llegada(data: CheckInRequest, db: Session = Depends(get_db)):
+    cita, mensaje = crud.checkin_paciente(db, data.telefono)
+    
+    if not cita:
+        # Si la validación falla por que no hay paciente o no hay cita hoy
+        raise HTTPException(status_code=404, detail=mensaje)
+        
+    return {"message": mensaje, "estado": cita.estado}
+
+
 @router.post("/citas", response_model=schemas.Cita)
 async def create_cita(cita: schemas.CitaCreate, db: Session = Depends(get_db)):
     # Antes de crear, validar que el paciente sea propiedad de este doctor?

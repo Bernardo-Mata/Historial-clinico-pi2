@@ -98,6 +98,7 @@ class Cita(Base):
     paciente = relationship("Paciente", back_populates="citas")
     doctor = relationship("Doctor", back_populates="citas")
     consultorio = relationship("Consultorio", back_populates="citas")
+    estado = Column(String(50), default="Pendiente")
 
 # Consultorio
 class Consultorio(Base):
