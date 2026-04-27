@@ -7,7 +7,7 @@ const CheckIn = () => {
     e.preventDefault();
     
     try {
-      const API_URL = "http://localhost:8000"; 
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000"; 
       
       const response = await fetch(`${API_URL}/check-in`, {
         method: 'POST',

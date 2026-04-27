@@ -95,6 +95,7 @@ class Cita(Base):
     telefono = Column(String(300))
     detalle_cita = Column(Text)
     correo_electronico = Column(String(300))
+    estado = Column(String(50), default="Pendiente")
     paciente = relationship("Paciente", back_populates="citas")
     doctor = relationship("Doctor", back_populates="citas")
     consultorio = relationship("Consultorio", back_populates="citas")

@@ -148,7 +148,54 @@ Proyecto/
    cd backend
 
    python -m venv venv
-   
+
+## 📖 SOP: Uso del Sistema de Recepción Virtual (QR)
+
+Este Standard Operating Procedure (SOP) describe el proceso para habilitar el acceso al sistema desde dispositivos móviles en la red local.
+
+### 1. Preparación del Entorno
+1. **Identificar IP Local:** Abre una terminal y ejecuta `ipconfig`. Copia tu dirección IPv4 (ej. `192.168.1.15`).
+2. **Configurar Frontend:** En `frontend/.env`, actualiza la variable `VITE_API_URL` con tu IP:
+   ```env
+   VITE_API_URL=http://<TU_IP_LOCAL>:8000
+   ```
+
+### 2. Configuración del Firewall (Acceso de Red)
+Para permitir que dispositivos externos (celulares) se conecten a tu servidor local, debes abrir los puertos correspondientes.
+
+> [!IMPORTANT]
+> Ejecuta estos comandos en **PowerShell como Administrador**.
+
+*   **Habilitar acceso (Antes de la prueba):**
+    ```powershell
+    New-NetFirewallRule -DisplayName "Pruebas Clinica Backend" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow
+    New-NetFirewallRule -DisplayName "Pruebas Clinica Frontend" -Direction Inbound -LocalPort 5173 -Protocol TCP -Action Allow
+    ```
+*   **Deshabilitar acceso (Al finalizar):**
+    ```powershell
+    Remove-NetFirewallRule -DisplayName "Pruebas Clinica Backend"
+    Remove-NetFirewallRule -DisplayName "Pruebas Clinica Frontend"
+    ```
+
+### 3. Ejecución del Sistema en Red Local
+1. **Backend:** Inicia el servidor escuchando en todas las interfaces:
+   ```sh
+   cd backend
+   uvicorn main:app --host 0.0.0.0 --port 8000
+   ```
+2. **Frontend:** Inicia Vite con el flag de host:
+   ```sh
+   cd frontend
+   npm run dev -- --host
+   ```
+
+### 4. Uso del QR por el Paciente
+1. Desde el Dashboard del Doctor, accede a la sección de **Generador de QR**.
+2. El sistema generará automáticamente un código basado en la URL de red actual (`window.location.origin`).
+3. El paciente escanea el código con su celular (debe estar en el mismo Wi-Fi).
+4. El paciente completa su confirmación en su propio dispositivo.
+
+   ```
    # Windows
    .\venv\Scripts\activate
    

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const FormularioFeedback = () => {
   const { pacienteId } = useParams();
   const navigate = useNavigate();
@@ -57,7 +59,7 @@ const FormularioFeedback = () => {
     try {
         console.log("Enviando feedback:", { ...formData, paciente_id: parseInt(pacienteId) });
         
-      const response = await fetch('http://localhost:8000/feedback', {
+      const response = await fetch(`${API_URL}/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, paciente_id: parseInt(pacienteId) })
